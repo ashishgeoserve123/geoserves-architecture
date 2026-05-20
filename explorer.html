@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoPerform - C4 Model Explorer</title>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    window.mermaid = mermaid;
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: "base",
+      themeVariables: {
+        primaryColor:       "#dbeafe",
+        primaryTextColor:   "#000000",
+        primaryBorderColor: "#2563eb",
+        lineColor:          "#000000",
+        secondaryColor:     "#fef3c7",
+        tertiaryColor:      "#cffafe",
+        background:         "#ffffff",
+        mainBkg:            "#dbeafe",
+        nodeBorder:         "#2563eb",
+        clusterBkg:         "#f0f9ff",
+        titleColor:         "#1e3a5f",
+        edgeLabelBackground:"#f0f9ff",
+        fontFamily:         "Inter, ui-sans-serif, system-ui, sans-serif"
+      },
+      securityLevel: "loose",
+      flowchart: { useMaxWidth: true, htmlLabels: true, curve: "basis", rankSpacing: 50, nodeSpacing: 25 },
+      sequence: { mirrorActors: false, messageAlign: "center", boxTextMargin: 5 }
+    });
+  </script>
+  <style>
+    /* ── CSS Variables ─────────────────────────────────────── */
+    :root {
+      --bg:       #060c18;
+      --panel:    #0a1228;
+      --panel-2:  #0e1a36;
+      --panel-3:  #112044;
+      --text:     #e2e8f8;
+      --muted:    #8899c0;
+      --accent:   #60a5fa;   /* blue  */
+      --accent-y: #facc15;   /* yellow */
+      --accent-b: #38bdf8;   /* sky   */
+      --border:   #1e2d5a;
+      --border-2: #2a3d72;
+      --chip:     #172045;
+      --shadow:   0 12px 40px rgba(0,0,0,.6);
+    }
+
+    /* ── Reset ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Layout ────────────────────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ───────────────────────────────────────────── */
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 22px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .sidebar h1 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 4px;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar > p {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+
+    /* ── Cards ─────────────────────────────────────────────── */
+    .card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    h2 { font-size: 1.2rem; color: var(--text); margin-bottom: 8px; }
+    h3 { font-size: 0.85rem; font-weight: 700; color: var(--accent); text-transform: uppercase;
+         letter-spacing: 0.06em; margin: 0 0 10px; }
+
+    p, li { color: var(--muted); line-height: 1.55; font-size: 0.83rem; }
+
+    /* ── Nav Buttons ───────────────────────────────────────── */
+    .service-list { display: grid; gap: 7px; }
+
+    button.service-btn,
+    button.nav-btn {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--border);
+      background: var(--chip);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 13px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      font-size: 0.82rem;
+      font-family: inherit;
+    }
+
+    button.service-btn:hover, button.nav-btn:hover {
+      background: var(--panel-3);
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateX(2px);
+    }
+
+    button.service-btn.active {
+      background: #172045;
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+      box-shadow: 0 0 0 1px rgba(96,165,250,.15) inset;
+    }
+
+    button.nav-btn.flow-btn {
+      border-color: #1a3a5c;
+      background: #071524;
+    }
+    button.nav-btn.flow-btn:hover {
+      border-color: var(--accent-b);
+      color: var(--accent-b);
+      background: #0a1e30;
+    }
+
+    /* ── Chips ─────────────────────────────────────────────── */
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+
+    .chip {
+      background: var(--chip);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+
+    .chip-g { background:#172045; color:#93c5fd; border-color:#3b82f6; }
+    .chip-y { background:#2a1800; color:#fde68a; border-color:#d97706; }
+    .chip-b { background:#071a2b; color:#7dd3fc; border-color:#0284c7; }
+    .chip-p { background:#1e0a38; color:#d8b4fe; border-color:#7c3aed; }
+
+    /* ── Main content ──────────────────────────────────────── */
+    .content { padding: 28px 32px; }
+
+    .topbar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+
+    /* ── Diagram wrap ──────────────────────────────────────── */
+    .diagram-wrap {
+      overflow: auto;
+      border: 1px solid var(--border-2);
+      border-radius: 14px;
+      background: #f8fafc;
+      padding: 14px;
+      min-height: 500px;
+    }
+    .diagram-wrap svg { width: 100%; height: auto; display: block; }
+
+    /* ── Meta boxes ────────────────────────────────────────── */
+    .service-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .meta-box {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 13px;
+      background: rgba(255,255,255,0.03);
+      font-size: 0.78rem;
+    }
+
+    .meta-box strong { color: var(--accent); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .meta-box div { color: var(--muted); margin-top: 5px; line-height: 1.5; }
+
+    /* ── Legend ────────────────────────────────────────────── */
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 9px;
+      margin-top: 10px;
+    }
+
+    .legend .item {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.78rem;
+    }
+
+    .legend .item strong { color: var(--text); }
+
+    /* ── Tabs ──────────────────────────────────────────────── */
+    .tab-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+
+    .tab-btn {
+      background: var(--chip);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: 0.15s ease;
+      font-family: inherit;
+    }
+
+    .tab-btn:hover { background: var(--panel-3); color: var(--text); border-color: var(--border-2); }
+
+    .tab-btn.active {
+      background: #172045;
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .tab-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      line-height: 1.6;
+      padding: 10px 14px;
+      background: rgba(96,165,250,.04);
+      border: 1px solid rgba(96,165,250,.15);
+      border-radius: 9px;
+    }
+
+    /* ── Black-box panels (overview) ───────────────────────── */
+    .bb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+      margin-top: 4px;
+    }
+
+    .bb-panel {
+      border: 1px dashed var(--border-2);
+      border-radius: 12px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.015);
+    }
+
+    .bb-panel h4 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 8px;
+    }
+
+    .bb-panel.green h4  { color: var(--accent); }
+    .bb-panel.yellow h4 { color: var(--accent-y); }
+    .bb-panel.blue h4   { color: var(--accent-b); }
+    .bb-panel.purple h4 { color: #c084fc; }
+    .bb-panel.gray h4   { color: #94a3b8; }
+
+    .bb-panel ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+    .bb-panel ul li { font-size: 0.76rem; color: var(--muted); padding-left: 14px; position: relative; }
+    .bb-panel ul li::before { content: "•"; position: absolute; left: 0; }
+    .bb-panel.green  ul li::before { color: var(--accent); }
+    .bb-panel.yellow ul li::before { color: var(--accent-y); }
+    .bb-panel.blue   ul li::before { color: var(--accent-b); }
+    .bb-panel.purple ul li::before { color: #c084fc; }
+    .bb-panel.gray   ul li::before { color: #94a3b8; }
+
+    /* ── Footer note ───────────────────────────────────────── */
+    .footer-note { margin-top: 12px; font-size: 0.78rem; color: var(--muted); }
+
+    /* ── Helpers ───────────────────────────────────────────── */
+    .hidden { display: none; }
+    .muted  { color: var(--muted); }
+
+    /* ── Scrollbar ─────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ── Responsive ────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: relative; height: auto; }
+      .content { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <h1>GeoPerform</h1>
+    <p>Interactive C4-style architecture explorer for the GeoPerform platform repositories.</p>
+
+    <div class="card">
+      <h3>Views</h3>
+      <div class="service-list">
+        <button class="nav-btn" onclick="showOverview()">System Landscape</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Services</h3>
+      <div id="serviceButtons" class="service-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>Architecture Flows</h3>
+      <div class="service-list">
+        <button class="nav-btn flow-btn" onclick="showService('endtoend')">End-to-End Data Flow</button>
+        <button class="nav-btn flow-btn" onclick="showService('requestpipeline')">Request Pipeline</button>
+        <button class="nav-btn flow-btn" onclick="showService('infrastructure')">Infrastructure</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Color Key</h3>
+      <div style="display:grid;gap:6px;margin-top:4px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:14px;height:14px;background:#dbeafe;border:1.5px solid #2563eb;border-radius:3px;flex-shrink:0;"></div>
+            <span style="font-size:0.75rem;color:var(--muted);">Service / Container</span>
+          </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:14px;height:14px;background:#713f12;border:1.5px solid #d97706;border-radius:3px;flex-shrink:0;"></div>
+          <span style="font-size:0.75rem;color:var(--muted);">Sub-component / Job</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:14px;height:14px;background:#0c4a6e;border:1.5px solid #38bdf8;border-radius:3px;flex-shrink:0;"></div>
+          <span style="font-size:0.75rem;color:var(--muted);">Database</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:14px;height:14px;background:#4a1d96;border:1.5px solid #8b5cf6;border-radius:3px;flex-shrink:0;"></div>
+          <span style="font-size:0.75rem;color:var(--muted);">External / Integration</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:14px;height:14px;background:#1e3a5f;border:1.5px solid #3b82f6;border-radius:3px;flex-shrink:0;"></div>
+          <span style="font-size:0.75rem;color:var(--muted);">Person / User</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;border:1px dashed #4b5563;border-radius:3px;padding:2px 4px;">
+          <div style="width:14px;height:14px;background:#1c1917;border:1.5px dashed #78716c;border-radius:3px;flex-shrink:0;"></div>
+          <span style="font-size:0.75rem;color:var(--muted);">Black Box (collapsed)</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main ─────────────────────────────────────────────── -->
+  <main class="content">
+
+    <!-- ── Overview Section ───────────────────────────────── -->
+    <section id="overviewSection">
+      <div class="card">
+        <h2>System Landscape</h2>
+        <p>
+          <strong style="color:var(--text);">GeoPerform</strong> is organised into Domain APIs, Background Workers,
+          and Analytics services. Complex subsystems are shown as
+          <strong style="color:#a3a3a3;">Black Boxes</strong> in the main diagram — each is expanded below.
+        </p>
+        <div class="chips">
+          <span class="chip chip-g">Domain APIs</span>
+          <span class="chip chip-y">Background Workers</span>
+          <span class="chip chip-b">Databases</span>
+          <span class="chip chip-p">External APIs</span>
+          <span class="chip">Infrastructure BB</span>
+          <span class="chip">External Integrations BB</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>GeoPerform — Simplified System Diagram</h3>
+        <div id="overviewDiagram" class="diagram-wrap"></div>
+        <div class="footer-note">
+          Black boxes (dashed border) are collapsed for clarity. See the expansion panels below.
+          Click a service in the left panel for a detailed C4 view.
+        </div>
+      </div>
+
+      <!-- Black Box Expansion Panels -->
+      <div class="card">
+        <h3>Black Box Expansions</h3>
+        <div class="bb-grid">
+
+          <div class="bb-panel green">
+            <h4>BB-1 — Domain APIs (Service Region)</h4>
+            <ul>
+              <li><strong>User API</strong> — JWT auth, users/roles/policies, SSO, Graph</li>
+              <li><strong>Masters API</strong> — ports, fuels, vessel classes, CP terms</li>
+              <li><strong>Voyages API</strong> — fleet analytics, MRV, AER, FuelEU, Hangfire jobs</li>
+              <li><strong>Reports API</strong> — Excel reports via ClosedXML templates</li>
+              <li><strong>Library API</strong> — API-key integration, MediatR, GeoOne proxy</li>
+            </ul>
+          </div>
+
+          <div class="bb-panel yellow">
+            <h4>BB-2 — Background Workers (Worker Region)</h4>
+            <ul>
+              <li><strong>Report Engine</strong> — QuestPDF render, blob upload, Hangfire retry</li>
+              <li><strong>Charterparty Jobs</strong> — TCV2 (7 workers) + TCV2LNG (5 workers)</li>
+              <li><strong>Digital Twin</strong> — DTAPI + DTScheduler + Python ML models</li>
+              <li><strong>Data Verification</strong> — ABP layered, DNV, Verifavia integration</li>
+            </ul>
+          </div>
+
+          <div class="bb-panel blue">
+            <h4>BB-3 — Infrastructure Layer</h4>
+            <ul>
+              <li><strong>AWS Secrets Manager</strong> — config / secrets for all services</li>
+              <li><strong>AWS CloudWatch Logs</strong> — centralised logging</li>
+              <li><strong>Prometheus</strong> — metrics scraping (/metrics endpoints)</li>
+              <li><strong>Hangfire</strong> — recurring job scheduling for Voyages + CP Jobs</li>
+              <li><strong>ABP Services</strong> — framework services for DataVerification</li>
+              <li><strong>Application Insights</strong> — APM for Voyages API</li>
+            </ul>
+          </div>
+
+          <div class="bb-panel purple">
+            <h4>BB-4 — External Integrations</h4>
+            <ul>
+              <li><strong>Microsoft Graph API</strong> — email notifications, user data</li>
+              <li><strong>GeoOne SSO</strong> — single sign-on integration</li>
+              <li><strong>Google reCAPTCHA</strong> — bot protection on auth flows</li>
+              <li><strong>Weather APIs / DTN</strong> — weather data for exclusion calc</li>
+              <li><strong>Distance API</strong> — voyage distance calculations</li>
+              <li><strong>Azure Blob / S3</strong> — PDF/Excel storage, ML models</li>
+              <li><strong>DNV + Verifavia</strong> — external data verifiers</li>
+              <li><strong>Gotenberg</strong> — PDF rendering for Digital Twin</li>
+              <li><strong>Python Runtime</strong> — ML model execution (DTScheduler)</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Legend</h3>
+        <div class="legend">
+          <div class="item"><strong>Person (dark blue)</strong><br/>End users, ops, admin, and internal system triggers.</div>
+          <div class="item"><strong>Service / Container (light blue)</strong><br/>GeoPerform APIs, integration services, and worker runtimes.</div>
+          <div class="item"><strong>Sub-component / Job (dark amber)</strong><br/>Internal workers, jobs, handlers, and pipeline steps.</div>
+          <div class="item"><strong>Database (light cyan)</strong><br/><strong>FormsDB</strong> — GeoForms &amp; Library API.<br/><strong>PerformDB</strong> — Voyages, CP Jobs, Digital Twin, Data Verification, Report Engine.<br/><strong>Report Engine DB</strong> — Templates, Report Engine only.</div>
+          <div class="item"><strong>External (dark purple)</strong><br/>Third-party APIs, platforms, and cloud integrations.</div>
+          <div class="item"><strong>Black Box (dashed gray)</strong><br/>Collapsed subsystem — expanded in the panels above.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Service Detail Section ──────────────────────────── -->
+    <section id="serviceSection" class="hidden">
+      <div class="topbar">
+        <button class="nav-btn" style="width:auto" onclick="showOverview()">← Back to System Landscape</button>
+      </div>
+
+      <div class="card">
+        <h2 id="serviceTitle">Service</h2>
+        <p id="serviceDescription" class="muted"></p>
+        <div class="service-meta">
+          <div class="meta-box">
+            <strong>Primary responsibility</strong>
+            <div id="serviceResponsibility"></div>
+          </div>
+          <div class="meta-box">
+            <strong>Main dependencies</strong>
+            <div id="serviceDependencies"></div>
+          </div>
+          <div class="meta-box">
+            <strong>Visible internal structure</strong>
+            <div id="serviceInternals"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 id="diagramCardTitle">Diagram</h3>
+        <div id="tabBar" class="tab-bar" style="display:none;"></div>
+        <div id="tabDesc" class="tab-desc" style="display:none;"></div>
+        <div id="serviceDiagram" class="diagram-wrap"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  /* ── Consistent classDef block used in every diagram ─────── */
+  const CDEFS = `
+  classDef person  fill:#e0e7ff,color:#000000,stroke:#4f46e5,stroke-width:2px;
+  classDef svc     fill:#dbeafe,color:#000000,stroke:#2563eb,stroke-width:2px;
+  classDef job     fill:#fef3c7,color:#000000,stroke:#d97706,stroke-width:2px;
+  classDef db      fill:#cffafe,color:#000000,stroke:#0891b2,stroke-width:2px;
+  classDef ext     fill:#ede9fe,color:#000000,stroke:#7c3aed,stroke-width:2px;
+  classDef infra   fill:#f1f5f9,color:#000000,stroke:#64748b,stroke-width:2px;
+  classDef obs     fill:#fce7f3,color:#000000,stroke:#ec4899,stroke-width:2px;
+  classDef bb      fill:#f8fafc,color:#000000,stroke:#6b7280,stroke-width:2px,stroke-dasharray:6 3;
+`;
+
+  const services = {
+
+    userapi: {
+      title: "User API",
+      description: "Identity and access service for GeoPerform. Provides JWT authentication, authorization policies, user/role/policy management, SSO flows, reCAPTCHA, Microsoft Graph integration, SQL-backed persistence, health endpoints, Prometheus metrics, and CloudWatch logging.",
+      responsibility: "Authenticate users, manage users/roles/policies, enforce access rules, support GeoOne SSO.",
+      dependencies: "GeoPerformDB, AWS Secrets Manager, CloudWatch, Microsoft Graph API, GeoOne SSO, Google reCAPTCHA, SMTP, Prometheus.",
+      internals: "ASP.NET Core host, JWT auth, authorization policies, controllers (Account/Users/Role/Policy), application services, helpers, repositories, EF Core, health endpoints.",
+      diagram: `
+flowchart TB
+${CDEFS}
+  Client["Web UI / Client Apps"]:::person
+  Admin["Admin / Ops User"]:::person
+  Prom["Prometheus Scraper"]:::obs
+
+  subgraph UserAPI["gp-user-api"]
+    direction TB
+    API["ASP.NET Core API Host"]:::svc
+    Pipeline["Request Pipeline\\nCORS, HTTPS, ErrorHandler, PathBase"]:::svc
+    Auth["JWT Auth + Authorization Policies"]:::svc
+    Controllers["Controllers\\nAccount / Users / Role / Policy"]:::svc
+    Services["Application Services\\nUserMgmt, RoleMgmt, MailService"]:::job
+    Helpers["Helpers\\nAuthServer, JWTHelper, ReCaptchaHelper"]:::job
+    Repos["Repositories"]:::job
+    DbCtx["EF Core DatabaseContext"]:::job
+    Health["Health + /metrics"]:::job
+
+    API --> Pipeline --> Auth --> Controllers
+    Controllers --> Services
+    Controllers --> Helpers
+    Services --> Repos --> DbCtx
+    Health --> API
+  end
+
+  GeoDB[("GeoPerformDB")]:::db
+  Secrets["AWS Secrets Manager"]:::ext
+  CW["AWS CloudWatch Logs"]:::ext
+  Graph["Microsoft Graph API"]:::ext
+  GeoOne["GeoOne SSO"]:::ext
+  Google["Google reCAPTCHA"]:::ext
+  Mail["SMTP / Mail Provider"]:::ext
+
+  Client --> API
+  Admin --> API
+  DbCtx --> GeoDB
+  API --> Secrets
+  API --> CW
+  Services --> Graph
+  Helpers --> Google
+  Controllers --> GeoOne
+  Services --> Mail
+  Prom --> Health
+`
+    },
+
+    mastersapi: {
+      title: "Masters API",
+      description: "Master and reference-data service. Exposes domain controllers for ports, fuels, vessel classes, CP terms, sea/shop trials, operators, and other master entities. Uses AutoMapper, custom middlewares, health checks, Prometheus, CloudWatch.",
+      responsibility: "Maintain and expose shared master/reference data and configuration used by other GeoPerform modules.",
+      dependencies: "GeoPerformDB, AWS Secrets Manager, CloudWatch, Microsoft Graph, queue configuration, authorization library, Prometheus.",
+      internals: "ASP.NET Core host, JWT auth + authorization library, many controllers, domain services, repositories, AutoMapper, EF Core, health endpoints.",
+      diagram: `
+flowchart TB
+${CDEFS}
+  Client["UI / Internal Clients"]:::person
+  Admin["Ops / Admin"]:::person
+  Prom["Prometheus Scraper"]:::obs
+
+  subgraph MastersAPI["gp-master-api"]
+    direction TB
+    API["ASP.NET Core API Host"]:::svc
+    Pipeline["Request Pipeline\\nCORS, HTTPS, PathBase, Security Headers"]:::svc
+    Auth["JWT Auth + Authorization Library"]:::svc
+    Controllers["Controllers\\nPorts, Fuels, Terms, Trials, Vessel Classes, Operators"]:::svc
+    Services["Domain Services"]:::job
+    Repos["Repositories"]:::job
+    Helpers["Helpers\\nCurrentUserService, AuthServer, Mailer"]:::job
+    Mapper["AutoMapper"]:::job
+    DbCtx["EF Core DatabaseContext"]:::job
+    Health["Health + /metrics"]:::job
+
+    API --> Pipeline --> Auth --> Controllers
+    Controllers --> Services
+    Controllers --> Helpers
+    Services --> Mapper
+    Services --> Repos --> DbCtx
+    Health --> API
+  end
+
+  GeoDB[("GeoPerformDB")]:::db
+  Secrets["AWS Secrets Manager"]:::ext
+  CW["AWS CloudWatch Logs"]:::ext
+  Graph["Microsoft Graph"]:::ext
+  Queue["Queue / Manual Run Queue"]:::ext
+
+  Client --> API
+  Admin --> API
+  DbCtx --> GeoDB
+  API --> Secrets
+  API --> CW
+  Services --> Graph
+  Services --> Queue
+  Prom --> Health
+`
+    },
+
+    voyageapi: {
+      title: "Voyages API",
+      description: "Voyage and fleet analytics service with Hangfire background processing, voyage/fleet/MRV/AER/FuelEU/tracking/weather tile endpoints, SQL repositories, weather and distance integrations, Blob storage, Application Insights, CloudWatch, and Prometheus metrics.",
+      responsibility: "Provide voyage, fleet, emissions, FuelEU, MRV, tracking, map/weather, and background-job workflows for operational voyage analytics.",
+      dependencies: "GeoPerformDB, Hangfire SQL schema, AWS Secrets Manager, CloudWatch, App Insights, Prometheus, DTN/weather, distance API, Azure Blob, SMTP.",
+      internals: "ASP.NET Core host, JWT auth, authorization library, many controllers, services, repositories, Hangfire server/dashboard/recurring jobs, map/weather services, land-detection service.",
+      diagram: `
+flowchart TB
+${CDEFS}
+  Client["Web UI / Client Apps"]:::person
+  Internal["Internal API Consumers"]:::person
+  Prom["Prometheus Scraper"]:::obs
+
+  subgraph VoyageAPI["gp-voyage-api"]
+    direction TB
+    API["ASP.NET Core API Host"]:::svc
+    Pipeline["Request Pipeline\\nCORS, HTTPS, PathBase, Exception, RequestContext"]:::svc
+    Auth["JWT Auth + Authorization Library"]:::svc
+    Controllers["Controllers\\nFleetView, AER, MRV, FuelEU, TrackScreen, WeatherTile"]:::svc
+    Services["Application Services\\nVoyages, FleetView, EMS, AER, MRV, FuelEU, Map"]:::job
+    Repos["Repositories"]:::job
+    Jobs["Hangfire Server + Recurring Jobs\\nFuelEU, Veson ROE, Analyzed Weather"]:::job
+    Geo["Land Detection / GeoData Init"]:::job
+    Health["Health + /metrics + Hangfire dashboard"]:::job
+
+    API --> Pipeline --> Auth --> Controllers
+    Controllers --> Services --> Repos
+    API --> Jobs
+    API --> Geo
+    Health --> API
+  end
+
+  GeoDB[("GeoPerformDB + voyage_jobs_hangfire")]:::db
+  Secrets["AWS Secrets Manager"]:::ext
+  CW["AWS CloudWatch Logs"]:::ext
+  AI["Application Insights"]:::obs
+  Weather["Weather APIs / Marine / DTN"]:::ext
+  Distance["Distance API"]:::ext
+  Blob["Azure Blob Storage"]:::ext
+  SMTP["SMTP / Office365"]:::ext
+
+  Client --> API
+  Internal --> API
+  Repos --> GeoDB
+  API --> Secrets
+  API --> CW
+  API --> AI
+  Repos --> Weather
+  Repos --> Distance
+  Services --> Blob
+  Repos --> SMTP
+  Jobs --> GeoDB
+  Prom --> Health
+`
+    },
+
+    reportsapi: {
+      title: "Reports API",
+      description: "Report-generation and export service producing Excel-based outputs for AER, EU MRV, UK MRV, IMO DCS, bunker, vessel daily detail, environmental performance, passage performance, pool performance, and vessel performance. Uses ClosedXML templates, SQL repositories, JWT auth, Prometheus, CloudWatch.",
+      responsibility: "Generate operational and compliance reports as downloadable files by querying GeoPerform data and populating Excel/report templates.",
+      dependencies: "GeoPerformDB, AWS Secrets Manager, CloudWatch, Prometheus, authorization library, ClosedXML templates, fonts, optional PDF tooling.",
+      internals: "ASP.NET Core host, JWT auth, authorization library, report controllers, report services, repositories, Excel/template helpers, file assets, health endpoints.",
+      diagram: `
+flowchart TB
+${CDEFS}
+  Client["Web UI / Download Consumers"]:::person
+  Prom["Prometheus Scraper"]:::obs
+
+  subgraph ReportsAPI["gp-report-api"]
+    direction TB
+    API["ASP.NET Core API Host"]:::svc
+    Pipeline["Request Pipeline\\nException, CORS, HTTPS, PathBase, Security Headers"]:::svc
+    Auth["JWT Auth + Authorization Library"]:::svc
+    Controllers["Report Controllers\\nAER, EuMrv, UkMrv, ImoDcs, Bunker, VDD, Emission, Passage, Pool"]:::svc
+    Services["Report Services"]:::job
+    Repos["Repositories"]:::job
+    Helpers["Excel / Template Helpers\\nClosedXML, file helpers"]:::job
+    Templates["Template + File Assets"]:::job
+    Pdf["PDF Adapter Service"]:::job
+    Health["Health + /metrics"]:::job
+
+    API --> Pipeline --> Auth --> Controllers
+    Controllers --> Services --> Repos
+    Controllers --> Helpers
+    Helpers --> Templates
+    Services --> Pdf
+    Health --> API
+  end
+
+  GeoDB[("GeoPerformDB")]:::db
+  Secrets["AWS Secrets Manager"]:::ext
+  CW["AWS CloudWatch Logs"]:::ext
+  Fonts["Linux Fonts / FontConfig"]:::ext
+  PdfTools["PDF Generation Tooling"]:::ext
+
+  Client --> API
+  Repos --> GeoDB
+  API --> Secrets
+  API --> CW
+  Helpers --> Fonts
+  Pdf --> PdfTools
+  Prom --> Health
+`
+    },
+
+    libraryapi: {
+      title: "Library API",
+      description: "API-key protected library and integration service with FormsDB and GeoPerformDB access, MediatR request handling, GeoOne integration endpoints, FuelEU proxy into Voyages API, custom middleware, health checks, Prometheus, CloudWatch.",
+      responsibility: "Expose library/form retrieval capabilities and integration APIs including GeoOne-facing and FuelEU orchestration over Voyages API.",
+      dependencies: "FormsDB, GeoPerformDB, AWS Secrets Manager, CloudWatch, Prometheus, memcache, MediatR, Voyages API.",
+      internals: "ASP.NET Core host, controllers, application services, data contexts, MediatR handlers, API-key validation, GeoOne services, health endpoints.",
+      diagram: `
+flowchart TB
+${CDEFS}
+  Client["External Integrators / Clients"]:::person
+  GeoOneUser["GeoOne / Internal Consumer"]:::person
+  Prom["Prometheus Scraper"]:::obs
+
+  subgraph LibraryAPI["gp-library-api"]
+    direction TB
+    API["ASP.NET Core API Host"]:::svc
+    Pipeline["Request Pipeline\\nCORS, PathBase, Serilog, Security Headers"]:::svc
+    Auth["API Key Validation"]:::svc
+    Controllers["Controllers\\nAuth, FormsLibrary, FuelEU v1/v2, GeoOne"]:::svc
+    Mediator["MediatR / Features / Query Handlers"]:::job
+    Services["Application + Integration Services"]:::job
+    Cache["Memcache"]:::job
+    FormsCtx["LibraryDbContext"]:::job
+    GeoCtx["GeoPerform DatabaseContext"]:::job
+    Health["Health + /metrics"]:::job
+
+    API --> Pipeline --> Auth --> Controllers
+    Controllers --> Mediator
+    Controllers --> Services
+    Services --> Cache
+    Mediator --> FormsCtx
+    Services --> GeoCtx
+    Health --> API
+  end
+
+  FormsDB[("FormsDB")]:::db
+  GeoDB[("GeoPerformDB")]:::db
+  Secrets["AWS Secrets Manager"]:::ext
+  CW["AWS CloudWatch Logs"]:::ext
+  Voyage["Voyages API"]:::ext
+
+  Client --> API
+  GeoOneUser --> API
+  FormsCtx --> FormsDB
+  GeoCtx --> GeoDB
+  API --> Secrets
+  API --> CW
+  Services --> Voyage
+  Prom --> Health
+`
+    },
+
+    reportengine: {
+      title: "Report Engine",
+      description: "Background report-processing engine with multi-project C# solution: business logic, repositories, systems, data models, SQL migrations, ClosedXML and QuestPDF document generation, and Hangfire retry semantics.",
+      responsibility: "Execute queued report jobs, process sections in parallel, and generate final PDF/Excel documents.",
+      dependencies: "SQL report/request stores, repositories, ClosedXML, QuestPDF, Hangfire retry, shared config, file/font assets.",
+      internals: "Worker runtime, ReportService/business logic, repositories, ConfigProvider, data model layers, SQL migrations, QuestPDF/ClosedXML stack.",
+      diagram: `
+flowchart TB
+${CDEFS}
+  APITrigger["Upstream APIs / Scheduling Trigger"]:::person
+  Ops["Ops / Support"]:::person
+
+  subgraph ReportEngine["gp-reportengine-api"]
+    direction TB
+    Worker["ReportWorker / Worker Runtime"]:::svc
+    BL["Business Logic / ReportService"]:::svc
+    Repo["Repositories"]:::job
+    Sys["Systems / ConfigProvider"]:::job
+    Docs["Document Generation\\nClosedXML / QuestPDF"]:::job
+    Assets["Fonts / Assets"]:::job
+
+    Worker --> BL
+    BL --> Repo
+    BL --> Docs
+    BL --> Sys
+    Docs --> Assets
+  end
+
+  ReportDB[("Report Request / Data Store")]:::db
+  FileStore["File / Asset Storage (Blob)"]:::ext
+  Upstream["GeoPerform Upstream Services"]:::ext
+
+  APITrigger --> Worker
+  Ops --> Worker
+  Repo --> ReportDB
+  BL --> Upstream
+  Docs --> FileStore
+`
+    },
+
+    dataverification: {
+      title: "Data Verification",
+      description: "ABP-based data verification platform with layered modular architecture: HttpApi host, Application, Application.Contracts, Domain, EntityFrameworkCore, and DbMigrator. Integrates with DNV and Verifavia for external verification.",
+      responsibility: "Manage data-verification workflows, inbound jobs, verifier integrations, and reconciliation processes.",
+      dependencies: "ABP framework modules, EF Core, DNV, Verifavia, migration host, identity/permission/audit modules, SQL persistence.",
+      internals: "ABP layered solution, HttpApi Host, Application services, Contracts/DTOs, Domain entities, EF Core layer, DbMigrator, verifier-processing components.",
+      diagram: `
+flowchart TB
+${CDEFS}
+  User["Verification UI / Internal Consumers"]:::person
+  Ops2["Admin / Migrator / Support"]:::person
+
+  subgraph DV["gp-data-verification-api"]
+    direction TB
+    Host["HttpApi Host"]:::svc
+    App["Application Layer"]:::svc
+    Contracts["Application.Contracts / DTOs"]:::job
+    Domain["Domain + Domain.Shared"]:::job
+    EF["EntityFrameworkCore"]:::job
+    Migrator["DbMigrator Hosted Service"]:::job
+    Verifiers["Verifier Processing\\nDNV / Verifavia"]:::job
+
+    Host --> App
+    App --> Contracts
+    App --> Domain
+    App --> Verifiers
+    Domain --> EF
+    Migrator --> EF
+  end
+
+  DVDB[("Data Verification Database")]:::db
+  DNV["DNV"]:::ext
+  Verifavia["Verifavia"]:::ext
+  ABP["ABP Identity / Permission / Audit / Background Jobs"]:::ext
+
+  User --> Host
+  Ops2 --> Host
+  EF --> DVDB
+  App --> DNV
+  App --> Verifavia
+  Host --> ABP
+  App --> ABP
+`
+    },
+
+    digitaltwin: {
+      title: "Digital Twin",
+      description: "Digital Twin service composed of DTAPI and DTScheduler. DTAPI handles predicted power, sea trial/shop test matrix, HCR/PDF endpoints. DTScheduler runs power prediction, offset and consumption calculations, data fetching, and Python ML model execution.",
+      responsibility: "Provide digital twin APIs, predicted power workflows, scheduler-triggered power prediction, and PDF/report support.",
+      dependencies: "Digital Twin and GeoPerform data stores, DTScheduler, Gotenberg PDF service, Python runtime/models, authorization middleware.",
+      internals: "DTAPI controllers, auth filters, service layer, Gotenberg adapter; DTScheduler orchestration, PowerPrediction services, Python model execution.",
+      diagram: `
+flowchart TB
+${CDEFS}
+  User2["Frontend and Ops Users"]:::person
+  Trigger["Internal Scheduler Trigger"]:::person
+
+  subgraph DigitalTwin["gp-digital-twin"]
+    direction TB
+
+    subgraph DTAPI["DTAPI"]
+      direction TB
+      DTControllers["Controllers\\nPredictedPower, SeaTrialMatrix, MeShopTestMatrix, HCR"]:::svc
+      DTServices["API Services and Authorization"]:::svc
+      DTPdf["Gotenberg PDF Adapter"]:::job
+
+      DTControllers --> DTServices
+      DTControllers --> DTPdf
+    end
+
+    subgraph DTSched["DTScheduler"]
+      direction TB
+      DTRunner["Job Runner and Scheduler"]:::svc
+      DTPower["Power Prediction Services"]:::svc
+      DTCalc["Offset and Consumption Calculators"]:::job
+      DTFetch["Data Fetching Services"]:::job
+      DTPython["Python Model Execution"]:::job
+
+      DTRunner --> DTPower
+      DTPower --> DTCalc
+      DTPower --> DTFetch
+      DTPower --> DTPython
+    end
+
+    DTAPI --> DTSched
+  end
+
+  DTDB[("Digital Twin + GeoPerform Data")]:::db
+  Gotenberg["Gotenberg PDF Service"]:::ext
+  Python["Python Runtime + Models"]:::ext
+
+  User2 --> DTAPI
+  Trigger --> DTAPI
+  DTServices --> DTDB
+  DTFetch --> DTDB
+  DTPdf --> Gotenberg
+  DTPython --> Python
+`
+    },
+
+    charterpartyjobs: {
+      title: "Charterparty Jobs",
+      description: "Background charter party processing service with CPJobAPI, BusinessLogic, Repositories, Systems, DataModels, and job modules: TCV2Job (7 workers) and TCV2LNGJob (5 workers). Uses Hangfire and SQL stored-procedure-heavy persistence.",
+      responsibility: "Execute charter-party calculation jobs and persist detailed performance results for Oil Tanker TCV2 and LNG TCV2LNG scenarios.",
+      dependencies: "FetchDataDB, DMLDataDB, Hangfire schema, stored procedures, repositories, ObjectFactory worker resolution.",
+      internals: "CPJobAPI host, Hangfire scheduling, ObjectFactory, BusinessLogic workers, repositories, ConfigProvider, data models, SQL TVP adapters.",
+      subDiagrams: [
+        {
+          label: "C4 Overview",
+          description: "Container-level C4 view: API host, ObjectFactory, all worker families, business logic, repositories, and backing databases.",
+          diagram: `
+flowchart TB
+${CDEFS}
+  Ops["Ops / Scheduler / Support"]:::person
+  APIClient["API / Internal Trigger"]:::person
+
+  subgraph CPJobs["gp-charterparty-jobs"]
+    direction TB
+    CPAPI["CPJobAPI\\nAPI + Hangfire Config"]:::svc
+    Factory["ObjectFactory / JobService"]:::svc
+    Workers["Workers\\nTCV2: AtSea, InPort, Pumping, CargoHeating, CargoCooling, TankCleaning, IGS\\nTCV2LNG: BOG, AtSea, InPort, Pumplog, IGS"]:::job
+    BL["BusinessLogic"]:::job
+    Repos["Repositories / SQL Access"]:::job
+    Systems["Systems / ConfigProvider / Error Handling"]:::job
+
+    CPAPI --> Factory
+    Factory --> Workers
+    Workers --> BL
+    BL --> Repos
+    BL --> Systems
+  end
+
+  FetchDB[("FetchDataDB")]:::db
+  DMLDB[("DMLDataDB")]:::db
+  Hangfire["Hangfire Queue / Schema"]:::ext
+
+  Ops --> CPAPI
+  APIClient --> CPAPI
+  Repos --> FetchDB
+  Repos --> DMLDB
+  CPAPI --> Hangfire
+`
+        },
+        {
+          label: "TCV2 — Oil Tankers",
+          description: "Full execution path of the TCV2 recurring job for oil tanker charter party performance. Hangfire triggers the job which fans out to 7 failure-isolated workers. All results written to perform-prod RDS via TVP.",
+          diagram: `
+flowchart TD
+${CDEFS}
+    HF(["Hangfire Scheduler\\nRecurring Job Trigger"]):::infra --> TCV2C
+
+    subgraph API["API Layer"]
+        TCV2C["TCV2Controller\\nPOST /api/TCV2/RunJob"]:::svc
+    end
+    TCV2C --> TCV2S
+
+    subgraph SVC["Service Layer"]
+        TCV2S["TCV2Service\\nOrchestrates all workers"]:::svc
+        TCV2S --> JS["JobService\\nResolves vessel list"]:::job
+        JS --> OF["ObjectFactory\\nResolves IWorker by WorkerType"]:::job
+    end
+
+    OF --> W1
+    OF --> W2
+    OF --> W3
+    OF --> W4
+    OF --> W5
+    OF --> W6
+    OF --> W7
+
+    subgraph WORKERS["Workers — failure-isolated per vessel"]
+        subgraph W1["AtSea Worker"]
+            direction TB
+            AS1["sp_GetCPTerms_AtSea"]:::job --> AS2["sp_GetReportData_AtSea"]:::job --> AS3["Build Passages"]:::job --> AS4["Weather Exclusion Filter"]:::job --> AS5["Performance Calculation"]:::job --> AS6["Insert Results via TVP"]:::job
+        end
+        subgraph W2["InPort Worker"]
+            direction TB
+            IP1["sp_GetCPTerms_InPort"]:::job --> IP2["sp_GetReportData_InPort"]:::job --> IP3["Port Stay Calculation"]:::job --> IP4["Insert via TVP"]:::job
+        end
+        subgraph W3["Pumping Worker"]
+            direction TB
+            PM1["sp_GetCPTerms_Pumping"]:::job --> PM2["sp_GetReportData_Pumping"]:::job --> PM3["Pump Performance"]:::job --> PM4["Insert via TVP"]:::job
+        end
+        subgraph W4["CargoHeating Worker"]
+            direction TB
+            CH1["sp_GetCPTerms_CargoHeating"]:::job --> CH2["sp_GetReportData_CargoHeating"]:::job --> CH3["Heating Calc"]:::job --> CH4["Insert via TVP"]:::job
+        end
+        subgraph W5["CargoCooling Worker"]
+            direction TB
+            CC1["sp_GetCPTerms_CargoCooling"]:::job --> CC2["sp_GetReportData_CargoCooling"]:::job --> CC3["Cooling Calc"]:::job --> CC4["Insert via TVP"]:::job
+        end
+        subgraph W6["TankCleaning Worker"]
+            direction TB
+            TC1["sp_GetCPTerms_TankCleaning"]:::job --> TC2["sp_GetReportData_TankCleaning"]:::job --> TC3["Cleaning Calc"]:::job --> TC4["Insert via TVP"]:::job
+        end
+        subgraph W7["IGS Worker"]
+            direction TB
+            IG1["sp_GetCPTerms_IGS"]:::job --> IG2["sp_GetReportData_IGS"]:::job --> IG3["IGS Calc"]:::job --> IG4["Insert via TVP"]:::job
+        end
+    end
+
+    subgraph DB["perform-prod — AWS RDS"]
+        DB1[("PassageDetails, ConsumptionDetails,\\nSpeedPerformance, FuelPerformance,\\nWeatherDetails, ExcludedReports")]:::db
+    end
+
+    W1 --> DB1
+    W2 --> DB1
+    W3 --> DB1
+    W4 --> DB1
+    W5 --> DB1
+    W6 --> DB1
+    W7 --> DB1
+
+    style API    fill:#dbeafe,stroke:#2563eb,color:#000000
+    style SVC    fill:#dbeafe,stroke:#2563eb,color:#000000
+    style WORKERS fill:#f0f9ff,stroke:#0284c7,color:#000000
+    style W1     fill:#e0f2fe,stroke:#0284c7,color:#000000
+    style W2     fill:#e0f2fe,stroke:#0ea5e9,color:#000000
+    style W3     fill:#fef3c7,stroke:#d97706,color:#000000
+    style W4     fill:#ffe4e6,stroke:#e11d48,color:#000000
+    style W5     fill:#f3e8ff,stroke:#9333ea,color:#000000
+    style W6     fill:#ffedd5,stroke:#ea580c,color:#000000
+    style W7     fill:#ccfbf1,stroke:#0d9488,color:#000000
+    style DB     fill:#cffafe,stroke:#0891b2,color:#000000
+`
+        },
+        {
+          label: "TCV2LNG — LNG Carriers",
+          description: "LNG charter party job with 5 workers in strict sequential order. BOG worker first handles thermodynamics and clamping. Remaining workers handle at-sea, in-port, pumplog, and IGS performance.",
+          diagram: `
+flowchart TD
+${CDEFS}
+    HF(["Hangfire Scheduler\\nRecurring Job Trigger"]):::infra --> LNGC
+
+    subgraph API["API Layer"]
+        LNGC["TCV2LNGController\\nPOST /api/TCV2LNG/RunJob"]:::svc
+    end
+    LNGC --> LNGS
+
+    subgraph SVC["Service Layer"]
+        LNGS["TCV2LNGService\\nOrchestrates 5 workers"]:::svc
+        LNGS --> JS["JobService\\nResolves LNG vessel list"]:::job
+        JS --> OF["ObjectFactory\\nResolves IWorker by WorkerType"]:::job
+    end
+
+    OF -->|"1st"| W_BOG
+    OF -->|"2nd"| W_SEA
+    OF -->|"3rd"| W_PORT
+    OF -->|"4th"| W_PUMP
+    OF -->|"5th"| W_IGS
+
+    subgraph WORKERS["5 LNG Workers — strict sequential order"]
+        subgraph W_BOG["BOG Worker"]
+            direction TB
+            B1["sp_GetCPTerms_BOG"]:::job --> B2["sp_GetReportData_BOG"]:::job --> B3["Passage Assembly"]:::job --> B4["BOG Thermodynamics"]:::job --> B5["CleanPumpPassageDetails"]:::job --> B6["Insert BOG results via TVP"]:::job
+        end
+        subgraph W_SEA["AtSea Worker — LNG"]
+            direction TB
+            AS1["sp_GetCPTerms_AtSea_LNG"]:::job --> AS2["sp_GetReportData_AtSea_LNG"]:::job --> AS3["Passage Builder"]:::job --> AS4["Weather Exclusion"]:::job --> AS5["LNG Speed and Fuel Perf"]:::job --> AS6["Insert via TVP"]:::job
+        end
+        subgraph W_PORT["InPort Worker — LNG"]
+            direction TB
+            IP1["sp_GetCPTerms_InPort_LNG"]:::job --> IP2["sp_GetReportData_InPort_LNG"]:::job --> IP3["Port Stay Duration"]:::job --> IP4["Port Fuel Performance"]:::job --> IP5["Insert via TVP"]:::job
+        end
+        subgraph W_PUMP["Pumplog Worker"]
+            direction TB
+            PM1["sp_GetCPTerms_Pumplog"]:::job --> PM2["sp_GetReportData_Pumplog"]:::job --> PM3["Pump Time Calculation"]:::job --> PM4["Insert via TVP"]:::job
+        end
+        subgraph W_IGS["IGS Worker — LNG"]
+            direction TB
+            IG1["sp_GetCPTerms_IGS_LNG"]:::job --> IG2["sp_GetReportData_IGS_LNG"]:::job --> IG3["IGS Performance"]:::job --> IG4["Insert via TVP"]:::job
+        end
+    end
+
+    subgraph DB["perform-prod — AWS RDS"]
+        LNG_T[("BOGPassageDetails, BOGPerformance,\\nLNGPassageDetails, LNGSpeedPerformance,\\nLNGExcludedReports, LNGPortPerformance,\\nLNGPumplogPerformance")]:::db
+    end
+
+    W_BOG --> LNG_T
+    W_SEA --> LNG_T
+    W_PORT --> LNG_T
+    W_PUMP --> LNG_T
+    W_IGS --> LNG_T
+
+    style API     fill:#dbeafe,stroke:#2563eb,color:#000000
+    style SVC     fill:#dbeafe,stroke:#2563eb,color:#000000
+    style WORKERS fill:#f0f9ff,stroke:#0284c7,color:#000000
+    style W_BOG   fill:#cffafe,stroke:#0891b2,color:#000000
+    style W_SEA   fill:#e0f2fe,stroke:#0284c7,color:#000000
+    style W_PORT  fill:#e0e7ff,stroke:#4f46e5,color:#000000
+    style W_PUMP  fill:#fef3c7,stroke:#d97706,color:#000000
+    style W_IGS   fill:#ffe4e6,stroke:#e11d48,color:#000000
+    style DB      fill:#cffafe,stroke:#0891b2,color:#000000
+`
+        }
+      ]
+    },
+
+    endtoend: {
+      title: "End-to-End Data Flow",
+      description: "Complete data journey from vessel officer report submission to downloadable PDF/Excel across all 4 platform layers: GeoForms, Ingestion Engine, Charter Party Jobs, and Report Engine.",
+      responsibility: "Illustrate how raw vessel reports flow through normalisation, performance calculation, and report generation to produce final outputs.",
+      dependencies: "geo-forms, gp-ingestionengine, gp-charterparty-jobs, gp-reportengine-api, GeoForms DB, VPS DB, perform-prod RDS, Azure Blob.",
+      internals: "Layer 1: GeoForms submission + auto-approval. Layer 2: Chunked ingestion, 6-gate validation, UTC/DMS normalisation, voyage lifecycle, deadlock retry. Layer 3: TCV2 + TCV2LNG performance jobs. Layer 4: QuestPDF render + blob upload.",
+      subDiagrams: [
+        {
+          label: "End-to-End Architecture",
+          description: "Full platform data flow from vessel officer report submission through ingestion, charter party performance calculation, and final PDF/Excel report generation.",
+          diagram: `
+flowchart TD
+${CDEFS}
+    CREW(["Vessel Officers — onboard"]):::person
+
+    subgraph GF["geo-forms — ABP .NET 8"]
+        GF_SUBMIT["GeoFormsController\\nPOST /submitted-forms"]:::svc
+        GF_APPROVE["AutoApprovalService\\n30-min Hangfire Job"]:::job
+        GF_INTEGRITY["DataIntegrityService\\nDaily validation"]:::job
+        GF_SUBMIT --> GF_APPROVE --> GF_INTEGRITY
+    end
+
+    CREW -->|"Submit daily reports"| GF_SUBMIT
+
+    subgraph GFDB["GeoForms DB"]
+        GF_DB[("SubmittedForms\\nFormFields\\nVesselFormStatus")]:::db
+    end
+
+    GF_SUBMIT --> GF_DB
+    GF_DB --> GF_APPROVE
+
+    subgraph IE["gp-ingestionengine — ABP .NET 8"]
+        IE_WORKER["GeoFormsInboundWorker\\nevery 5 min"]:::svc
+        IE_WORKER --> IE_GUARD["Duplicate Job Guard"]:::job
+        IE_GUARD --> IE_CHUNK["Chunked Retrieval\\n1000-row chunks"]:::job
+        IE_CHUNK --> IE_VALID["Validation — 6 gates"]:::job
+        IE_VALID --> IE_NORM["Field Normalisation\\nUTC, DMS, Bunker ROB"]:::job
+        IE_NORM --> IE_VOY["Voyage Lifecycle\\nDEP INSERT, NOON UPDATE"]:::job
+        IE_VOY --> IE_DEADLOCK["Deadlock Retry\\n5 attempts, exp. backoff"]:::job
+    end
+
+    GF_DB -->|"Approved forms"| IE_WORKER
+
+    subgraph VPSDB["VPS DB"]
+        VPS[("Voyages\\nNoonReports\\nPortReports\\nBunkerROB")]:::db
+    end
+
+    IE_DEADLOCK -->|"INSERT/UPDATE normalised records"| VPS
+
+    subgraph CPJ["gp-charterparty-jobs — .NET 8 + Hangfire"]
+        CPJ_TCV2["TCV2 Job\\nOil Tankers — 7 workers"]:::svc
+        CPJ_LNG["TCV2LNG Job\\nLNG Carriers — 5 workers"]:::svc
+    end
+
+    VPS -->|"Raw voyage data via SPs"| CPJ_TCV2
+    VPS -->|"LNG report data via SPs"| CPJ_LNG
+
+    subgraph PERFDB["perform-prod — AWS RDS"]
+        PERF[("PassageDetails\\nSpeedPerformance\\nFuelPerformance\\nExcludedReports\\nBOGPerformance")]:::db
+    end
+
+    CPJ_TCV2 -->|"Computed perf results via TVP"| PERF
+    CPJ_LNG -->|"Computed perf results via TVP"| PERF
+
+    subgraph RE["gp-reportengine-api — .NET 8"]
+        RE_C["ReportController"]:::svc
+        RE_W["ReportWorker — background"]:::svc
+        RE_S["ReportService"]:::job
+        RE_QP["QuestPDF Renderer"]:::job
+        RE_C --> RE_W --> RE_S --> RE_QP
+    end
+
+    PERF -->|"Performance data"| RE_S
+
+    subgraph BLOB["Azure Blob / S3"]
+        PDF[("Generated PDF / XLSX\\nReport templates")]:::db
+    end
+
+    RE_QP -->|"Upload rendered PDF/Excel"| BLOB
+    BLOB -->|"Download URL"| RE_C
+
+    style GF     fill:#dbeafe,stroke:#2563eb,color:#000000
+    style IE     fill:#e0e7ff,stroke:#4f46e5,color:#000000
+    style CPJ    fill:#fef3c7,stroke:#d97706,color:#000000
+    style RE     fill:#ede9fe,stroke:#7c3aed,color:#000000
+    style GFDB   fill:#cffafe,stroke:#0891b2,color:#000000
+    style VPSDB  fill:#cffafe,stroke:#0891b2,color:#000000
+    style PERFDB fill:#cffafe,stroke:#0891b2,color:#000000
+    style BLOB   fill:#cffafe,stroke:#0891b2,color:#000000
+`
+        }
+      ]
+    },
+
+    requestpipeline: {
+      title: "Request Pipeline",
+      description: "Full HTTP request lifecycle of the gp-reportengine-api across 5 phases: Enqueue, Section Prep, Section Processing, Render and Upload, and Client Download.",
+      responsibility: "Document the 5-phase async report pipeline from client POST to pre-signed URL download.",
+      dependencies: "ReportController, RBAC Middleware, ReportService, Report DB, ReportWorker, ISection impls, perform-prod RDS, QuestPDF, Azure Blob.",
+      internals: "Phase 1: JWT auth, INSERT ReportQueue. Phase 2-3: Parallel.ForEach sections, each ISection queries perform-prod, serialises JSON. Phase 4: QuestPDF compose + blob upload. Phase 5: pre-signed URL.",
+      subDiagrams: [
+        {
+          label: "Request Pipeline Flow",
+          description: "Sequence diagram — 5-phase HTTP lifecycle from client request to downloaded report.",
+          diagram: `
+sequenceDiagram
+    actor Client as Client
+    participant RC as ReportController
+    participant Auth as RBAC Middleware
+    participant RS as ReportService
+    participant DB as Report DB
+    participant RW as ReportWorker
+    participant IS as ISection impl
+    participant PDB as perform-prod RDS
+    participant QP as QuestPDF Renderer
+    participant BLOB as Azure Blob
+
+    Note over Client,DB: Phase 1 — Enqueue
+    Client->>RC: POST /Report/NewReportRequest
+    RC->>Auth: Validate JWT and RBAC
+    Auth-->>RC: 200 Authorized
+    RC->>RS: NewReport(reportType, params)
+    RS->>DB: INSERT ReportQueue
+    RC-->>Client: 200 OK { reportId }
+
+    Note over RW,PDB: Phase 2 and 3 — Section Processing
+    RW->>RS: FetchSectionsForReport(reportId)
+    RS-->>RW: List of SectionIds
+    loop For each SectionId
+        RW->>RS: ProcessSection(sectionId)
+        RS->>IS: GenerateData(params)
+        IS->>PDB: Query performance data
+        PDB-->>IS: ResultSet
+        IS-->>RS: SectionData JSON
+        RS->>DB: UPDATE Section Status=Processed
+    end
+
+    Note over RW,BLOB: Phase 4 — Render and Upload
+    RW->>RS: GenerateDocument(reportId)
+    RS->>QP: Compose PDF pages
+    QP-->>RS: PDF byte stream
+    RS->>BLOB: Upload PDF
+    BLOB-->>RS: BlobDocumentId
+    RS->>DB: UPDATE Status=Complete
+
+    Note over Client,BLOB: Phase 5 — Download
+    Client->>RC: GET /Report/DownloadReport/{reportId}
+    RC->>BLOB: Generate pre-signed URL
+    BLOB-->>RC: Signed URL
+    RC-->>Client: 302 Redirect
+`
+        }
+      ]
+    },
+
+    infrastructure: {
+      title: "Infrastructure Overview",
+      description: "Full AWS hosting topology. All services run as ECS Fargate tasks behind an ALB with SSL termination. Databases are RDS Multi-AZ SQL Server instances isolated per domain. External integrations include Microsoft Graph, ABB Platform, and Auth0.",
+      responsibility: "Show the complete cloud infrastructure: ECS compute, ALB networking, RDS Multi-AZ data, Blob storage, and external integrations.",
+      dependencies: "AWS ECS Fargate, AWS ALB, AWS RDS Multi-AZ SQL Server, Azure Blob / S3, Microsoft Graph API, ABB Platform, Auth0.",
+      internals: "Public zone WAF + CDN, private VPC with public subnet (ALB), private subnet (ECS, no public IP), data subnet (RDS). Outbound via NAT Gateway.",
+      subDiagrams: [
+        {
+          label: "Infrastructure Diagram",
+          description: "Complete AWS infrastructure topology — ECS services, RDS databases, cloud storage, and external service integrations.",
+          diagram: `
+flowchart TD
+${CDEFS}
+    subgraph USERS["External Actors"]
+        VESSEL["Vessel Officers"]:::person
+        OPS["Operations Teams"]:::person
+        ADMIN["Administrators"]:::person
+    end
+
+    subgraph AGW["API Gateway — AWS ALB"]
+        ALB["Application Load Balancer\\nSSL Termination — /api/* routing"]:::svc
+    end
+
+    USERS --> ALB
+
+    subgraph COMPUTE["Application Services — AWS ECS Fargate"]
+        GForms["geo-forms\\nABP .NET 8"]:::svc
+        IngEng["gp-ingestionengine\\nABP .NET 8"]:::svc
+        CPJobs["gp-charterparty-jobs\\n.NET 8 + Hangfire"]:::svc
+        RepEng["gp-reportengine-api\\n.NET 8"]:::svc
+        OtherAPIs["gp-master-api\\ngp-user-api, gp-rbac"]:::svc
+    end
+
+    ALB --> GForms
+    ALB --> IngEng
+    ALB --> CPJobs
+    ALB --> RepEng
+    ALB --> OtherAPIs
+
+    subgraph RDS["AWS RDS — SQL Server Multi-AZ"]
+        GF_DB[("GeoForms DB")]:::db
+        VPS_DB[("VPS DB")]:::db
+        PERF_DB[("perform-prod")]:::db
+        REPORT_DB[("Report Engine DB")]:::db
+        MASTER_DB[("Master DB")]:::db
+    end
+
+    GForms   --> GF_DB
+    IngEng   --> VPS_DB
+    CPJobs   --> PERF_DB
+    RepEng   --> REPORT_DB
+    RepEng   --> PERF_DB
+    OtherAPIs --> MASTER_DB
+
+    subgraph STORAGE["Cloud Storage"]
+        BLOB[("Azure Blob / S3\\nPDF reports, Templates, ML models")]:::db
+    end
+
+    RepEng -->|"Upload PDFs"| BLOB
+
+    subgraph EXT["External Services"]
+        GRAPH["Microsoft Graph API\\nerror emails"]:::ext
+        ABB["ABB Platform\\nETL push"]:::ext
+        AUTH["Auth0\\nJWT issuance"]:::ext
+    end
+
+    IngEng   --> GRAPH
+    GForms   --> ABB
+    OtherAPIs --> AUTH
+
+    style USERS   fill:#e0e7ff,stroke:#4f46e5,color:#000000
+    style AGW     fill:#fef3c7,stroke:#d97706,color:#000000
+    style COMPUTE fill:#dbeafe,stroke:#2563eb,color:#000000
+    style RDS     fill:#cffafe,stroke:#0891b2,color:#000000
+    style STORAGE fill:#cffafe,stroke:#0891b2,color:#000000
+    style EXT     fill:#ede9fe,stroke:#7c3aed,color:#000000
+`
+        }
+      ]
+    }
+  };
+
+  /* ── Simplified overview diagram ─────────────────────────── */
+  const overviewDefinition = `
+flowchart TB
+  classDef person  fill:#e0e7ff,color:#000000,stroke:#4f46e5,stroke-width:2px;
+  classDef svc     fill:#dbeafe,color:#000000,stroke:#2563eb,stroke-width:2px;
+  classDef worker  fill:#fef3c7,color:#000000,stroke:#d97706,stroke-width:2px;
+  classDef db      fill:#cffafe,color:#000000,stroke:#0891b2,stroke-width:2px;
+  classDef bb      fill:#f8fafc,color:#000000,stroke:#6b7280,stroke-width:2px,stroke-dasharray:6 3;
+
+  subgraph USERS["Users"]
+    direction LR
+    U1["End Users"]:::person
+    U2["Ops and Admin"]:::person
+    U3["Internal Systems"]:::person
+  end
+
+  INF["BB-3: Infrastructure\\nHangfire, Secrets, CloudWatch\\nPrometheus, ABP, App Insights"]:::bb
+
+  subgraph DOMAIN["BB-1: Domain APIs"]
+    direction LR
+    UserAPI["User API"]:::svc
+    MastersAPI["Masters API"]:::svc
+    VoyageAPI["Voyages API"]:::svc
+    ReportsAPI["Reports API"]:::svc
+    LibraryAPI["Library API"]:::svc
+  end
+
+  subgraph WORKERS["BB-2: Background Workers"]
+    direction LR
+    ReportEngine["Report Engine"]:::worker
+    CPJobs["Charterparty Jobs"]:::worker
+    DigitalTwin["Digital Twin"]:::worker
+    DataVerification["Data Verification"]:::worker
+  end
+
+  subgraph DATA["Databases"]
+    direction LR
+    FormsDB[("FormsDB\\nLibrary API, GeoForms")]:::db
+    PerformDB[("PerformDB\\nVoyages, CP Jobs, Digital Twin\\nData Verification, Report Engine")]:::db
+    ReportEngineDB[("Report Engine DB\\nTemplates — Report Engine only")]:::db
+  end
+
+  EXT["BB-4: External Integrations\\nGraph, GeoOne, Weather, Distance\\nDNV, Verifavia, Gotenberg, Python"]:::bb
+
+  USERS --> DOMAIN
+  USERS --> WORKERS
+  INF -.->|"supports"| DOMAIN
+  INF -.->|"supports"| WORKERS
+  DOMAIN -->|"reads/writes"| FormsDB
+  DOMAIN -->|"reads/writes"| PerformDB
+  WORKERS -->|"reads/writes"| PerformDB
+  ReportEngine -->|"templates"| ReportEngineDB
+  DOMAIN -->|"calls"| EXT
+  WORKERS -->|"calls"| EXT
+
+  style USERS   fill:#e0e7ff,stroke:#4f46e5,color:#000000
+  style DOMAIN  fill:#dbeafe,stroke:#2563eb,color:#000000
+  style WORKERS fill:#fef3c7,stroke:#d97706,color:#000000
+  style DATA    fill:#cffafe,stroke:#0891b2,color:#000000
+`;
+
+  /* ── Render helpers ──────────────────────────────────────── */
+  async function renderMermaid(targetId, definition) {
+    const el = document.getElementById(targetId);
+    el.innerHTML = '<div style="color:#8899c0;font-size:0.8rem;padding:20px;">Rendering diagram…</div>';
+    const id = "m" + Math.random().toString(36).slice(2);
+    try {
+      const { svg } = await window.mermaid.render(id, definition);
+      el.innerHTML = svg;
+    } catch (e) {
+      el.innerHTML = `<pre style="color:#f87171;padding:14px;font-size:0.75rem;white-space:pre-wrap;">Diagram render error:\n${e.message}</pre>`;
+    }
+  }
+
+  function setActiveButton(key) {
+    document.querySelectorAll(".service-btn").forEach(b => b.classList.remove("active"));
+    const btn = document.querySelector(`[data-service="${key}"]`);
+    if (btn) btn.classList.add("active");
+  }
+
+  async function showOverview() {
+    document.getElementById("overviewSection").classList.remove("hidden");
+    document.getElementById("serviceSection").classList.add("hidden");
+    document.querySelectorAll(".service-btn").forEach(b => b.classList.remove("active"));
+    await renderMermaid("overviewDiagram", overviewDefinition);
+  }
+
+  async function showSubDiagram(svc, index) {
+    const sub = svc.subDiagrams[index];
+    document.querySelectorAll(".tab-btn").forEach((b, i) => b.classList.toggle("active", i === index));
+    const descEl = document.getElementById("tabDesc");
+    descEl.textContent = sub.description;
+    descEl.style.display = "block";
+    await renderMermaid("serviceDiagram", sub.diagram);
+  }
+
+  async function showService(key) {
+    const svc = services[key];
+    if (!svc) return;
+
+    setActiveButton(key);
+    document.getElementById("overviewSection").classList.add("hidden");
+    document.getElementById("serviceSection").classList.remove("hidden");
+
+    document.getElementById("serviceTitle").textContent       = svc.title;
+    document.getElementById("serviceDescription").textContent = svc.description;
+    document.getElementById("serviceResponsibility").textContent = svc.responsibility;
+    document.getElementById("serviceDependencies").textContent   = svc.dependencies;
+    document.getElementById("serviceInternals").textContent      = svc.internals;
+
+    const tabBar = document.getElementById("tabBar");
+    const tabDesc = document.getElementById("tabDesc");
+    tabBar.innerHTML = "";
+
+    if (svc.subDiagrams && svc.subDiagrams.length > 1) {
+      tabBar.style.display = "flex";
+      svc.subDiagrams.forEach((sub, i) => {
+        const btn = document.createElement("button");
+        btn.className = "tab-btn" + (i === 0 ? " active" : "");
+        btn.textContent = sub.label;
+        btn.onclick = () => showSubDiagram(svc, i);
+        tabBar.appendChild(btn);
+      });
+      document.getElementById("diagramCardTitle").textContent = svc.title;
+      await showSubDiagram(svc, 0);
+    } else if (svc.subDiagrams && svc.subDiagrams.length === 1) {
+      tabBar.style.display = "none";
+      tabDesc.textContent = svc.subDiagrams[0].description;
+      tabDesc.style.display = "block";
+      document.getElementById("diagramCardTitle").textContent = svc.subDiagrams[0].label;
+      await renderMermaid("serviceDiagram", svc.subDiagrams[0].diagram);
+    } else {
+      tabBar.style.display = "none";
+      tabDesc.style.display = "none";
+      document.getElementById("diagramCardTitle").textContent = "C4 Diagram";
+      await renderMermaid("serviceDiagram", svc.diagram);
+    }
+  }
+
+  function initButtons() {
+    const container = document.getElementById("serviceButtons");
+    const flowKeys = new Set(["endtoend", "requestpipeline", "infrastructure"]);
+    Object.entries(services).forEach(([key, svc]) => {
+      if (flowKeys.has(key)) return;
+      const btn = document.createElement("button");
+      btn.className = "service-btn";
+      btn.dataset.service = key;
+      btn.textContent = svc.title;
+      btn.onclick = () => showService(key);
+      container.appendChild(btn);
+    });
+  }
+
+  window.showOverview = showOverview;
+  window.showService  = showService;
+
+  initButtons();
+  showOverview();
+</script>
+</body>
+</html>
